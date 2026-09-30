@@ -5,6 +5,24 @@ An unofficial Android TV client for Yandex Music, built for remote-control-only 
 the [phone client](https://github.com/dpronyaev/yamulite-android) and replaces every screen with a
 D-pad-first UI: no touch input is assumed anywhere.
 
+<p align="center">
+  <img src="docs/screenshots/now_playing.png" width="480" alt="Now Playing with D-pad seek hint"/>
+</p>
+
+## Screenshots
+
+| Sign-in (QR code) | Search |
+|:--:|:--:|
+| <img src="docs/screenshots/auth.png" width="420"/> | <img src="docs/screenshots/search.png" width="420"/> |
+
+| Artist | Favorites |
+|:--:|:--:|
+| <img src="docs/screenshots/artist.png" width="420"/> | <img src="docs/screenshots/favorites.png" width="420"/> |
+
+| Settings |
+|:--:|
+| <img src="docs/screenshots/settings.png" width="420"/> |
+
 ## Remote-control UX
 
 - **Loud focus.** Every interactive element scales up, gets a bright border and swaps to the
