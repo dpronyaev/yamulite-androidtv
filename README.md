@@ -34,18 +34,39 @@ system in `ui/tv/TvFocus.kt` is hand-rolled on top of plain Compose Foundation (
 
 `compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`.
 
+## Version
+
+`versionCode` / `versionName` live in `app/build.gradle.kts` (`defaultConfig`) and drive the output
+APK's filename via the `androidComponents.onVariants` block — every build is named
+`yamulite-tv-<versionName>-<variant>.apk`, so an APK's filename always tells you what it is without
+opening it. Bump both before cutting a release; `versionCode` must strictly increase for Android to
+accept an upgrade install over an existing one.
+
+Current version: **0.1.0** (versionCode 1).
+
+## Download
+
+A pre-built debug APK for the current version is kept in [`apk/yamulite-tv-0.1.0.apk`](apk/yamulite-tv-0.1.0.apk):
+
+```bash
+adb connect <device-ip>:5555   # e.g. a Dune HD Solo 8K on the same network
+adb install -r apk/yamulite-tv-0.1.0.apk
+adb shell am start -n dev.pdv.yamulite.tv/.MainActivity
+```
+
 ## Build & install
 
 ```bash
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 ./gradlew :app:assembleDebug
 
-adb connect <device-ip>:5555   # e.g. a Dune HD Solo 8K on the same network
+adb connect <device-ip>:5555
 adb install -r app/build/outputs/apk/debug/yamulite-tv-*-debug.apk
 adb shell am start -n dev.pdv.yamulite.tv/.MainActivity
 ```
 
-`local.properties` must contain `sdk.dir=...`.
+`local.properties` must contain `sdk.dir=...`. After bumping the version and rebuilding, copy the
+new APK into `apk/` (dropping the `-debug` suffix) and update this README's version references.
 
 ## Debugging on a TV device
 
