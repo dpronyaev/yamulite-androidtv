@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -69,8 +70,6 @@ fun MainScreen() {
     val nav = rememberNavController()
     val backStackEntry by nav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val playerVm: NowPlayingViewModel = hiltViewModel()
-    val playback by playerVm.state.collectAsStateWithLifecycle()
 
     fun goToTab(tab: Tab) {
         if (currentRoute != tab.route) {
@@ -105,16 +104,7 @@ fun MainScreen() {
                 )
             }
             Spacer(Modifier.weight(1f))
-            if (playback.track != null) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                MiniPlayer(
-                    trackLine = remember(playback.track) { playback.track!!.displayLine() },
-                    coverUri = playback.track?.coverUri ?: playback.track?.albums?.firstOrNull()?.coverUri,
-                    isPlaying = playback.isPlaying,
-                    onToggle = playerVm::togglePlayPause,
-                    onOpen = { goToTab(Tab.NowPlaying) },
-                )
-            }
+            MiniPlayerSection(onOpen = { goToTab(Tab.NowPlaying) })
         }
 
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
@@ -188,6 +178,32 @@ private fun NavRailItem(
             )
         }
     }
+}
+
+/**
+ * Owns its own [NowPlayingViewModel] collection so the position updates that tick twice a
+ * second during playback recompose only this small subtree — not the whole [MainScreen] (nav
+ * rail items, the NavHost's wrapping [Box], ...) the way a single top-level
+ * `collectAsStateWithLifecycle()` call would, since every tick produces a structurally "new"
+ * [dev.pdv.yamulite.tv.data.playback.PlaybackUi]. [derivedStateOf] narrows that down further so
+ * this composable itself only re-executes when the track or play state actually changes, not on
+ * every position tick.
+ */
+@Composable
+private fun MiniPlayerSection(onOpen: () -> Unit, vm: NowPlayingViewModel = hiltViewModel()) {
+    val playback by vm.state.collectAsStateWithLifecycle()
+    val trackAndPlaying by remember { derivedStateOf { playback.track to playback.isPlaying } }
+    val (track, isPlaying) = trackAndPlaying
+    if (track == null) return
+
+    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+    MiniPlayer(
+        trackLine = remember(track) { track.displayLine() },
+        coverUri = track.coverUri ?: track.albums.firstOrNull()?.coverUri,
+        isPlaying = isPlaying,
+        onToggle = vm::togglePlayPause,
+        onOpen = onOpen,
+    )
 }
 
 @Composable

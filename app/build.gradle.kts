@@ -24,6 +24,13 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Signed with the debug key so it installs straight over adb for real-hardware perf
+            // testing — swap in a real keystore before any public/store distribution. What
+            // matters for performance is `isDebuggable = false` (the release default): a
+            // debuggable APK disables ART runtime optimizations app-wide, which is otherwise
+            // invisible in day-to-day testing but measurably slower on real (especially weak,
+            // 32-bit) hardware than what the same code does once actually released.
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             isDebuggable = true

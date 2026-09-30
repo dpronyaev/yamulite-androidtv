@@ -64,7 +64,9 @@ Current version: **0.1.0** (versionCode 1).
 
 ## Download
 
-A pre-built debug APK for the current version is kept in [`apk/yamulite-tv-0.1.0.apk`](apk/yamulite-tv-0.1.0.apk):
+A pre-built **release** APK for the current version is kept in
+[`apk/yamulite-tv-0.1.0.apk`](apk/yamulite-tv-0.1.0.apk) — see [Performance](#performance) for why
+release, not debug:
 
 ```bash
 adb connect <device-ip>:5555   # e.g. a Dune HD Solo 8K on the same network
@@ -76,15 +78,43 @@ adb shell am start -n dev.pdv.yamulite.tv/.MainActivity
 
 ```bash
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
-./gradlew :app:assembleDebug
+./gradlew :app:assembleRelease    # or :app:assembleDebug while developing
 
 adb connect <device-ip>:5555
-adb install -r app/build/outputs/apk/debug/yamulite-tv-*-debug.apk
+adb install -r app/build/outputs/apk/release/yamulite-tv-*-release.apk
 adb shell am start -n dev.pdv.yamulite.tv/.MainActivity
 ```
 
 `local.properties` must contain `sdk.dir=...`. After bumping the version and rebuilding, copy the
-new APK into `apk/` (dropping the `-debug` suffix) and update this README's version references.
+new release APK into `apk/` (dropping the `-release` suffix) and update this README's version
+references.
+
+## Performance
+
+The release build type is signed with the debug key (see `app/build.gradle.kts`) specifically so
+`assembleRelease` produces something installable straight over adb for testing on real hardware —
+swap in a real keystore only if this ever needs to go through a store. Three things were verified
+to matter for perceived performance on the Dune's weak 32-bit CPU, none of which change any
+behavior a user can see:
+
+- **Ship release, not debug.** A `debug` build has `android:debuggable="true"`, which disables ART
+  runtime optimizations for the whole app — invisible in day-to-day development, but measurably
+  slower than the exact same code once actually released. Release also applies R8 shrinking:
+  **23.6 MB → 2.8 MB** for this app, which means faster install and a smaller footprint to
+  dex-load and verify at cold start. `proguard-rules.pro` already carries the keep rules this
+  needs for Hilt / Retrofit / kotlinx.serialization, ported from the phone app.
+- **Recomposition scope.** `AudioPlayer` publishes playback position every 500ms while something is
+  playing. `MainScreen` used to collect that `StateFlow` directly to feed the mini-player, which
+  meant the *entire* screen scaffold (all 4 nav rail items, the `NavHost`'s wrapping `Box`)
+  recomposed twice a second for as long as music played, everywhere in the app. Moved into its own
+  `MiniPlayerSection` composable (`ui/main/MainScreen.kt`) that owns the collection and narrows it
+  through `derivedStateOf` to just `(track, isPlaying)`, so only that small subtree re-executes,
+  and only when the track or play state actually changes — not on every position tick.
+- **Off-main-thread QR generation.** Encoding the OAuth QR code (`ui/tv/QrCode.kt`) fills a
+  480×480 bitmap pixel by pixel; on this hardware that's enough to drop a frame if done inline
+  during composition. Moved to `produceState` + `Dispatchers.Default`; the sign-in screen already
+  rendered nothing for that slot until the bitmap was ready, so the only change is timing, not
+  appearance.
 
 ## Debugging on a TV device
 
